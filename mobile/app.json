@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "EventMatch",
+    "slug": "event-match-connect",
+    "version": "1.0.0",
+    "scheme": "eventmatch",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#04030f"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.eventmatch.connect"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}
+
