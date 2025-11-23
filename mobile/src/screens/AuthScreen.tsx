@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 
 import { Screen } from "@/components/Screen";
 import { supabase } from "@/lib/supabase";
+import { Button, buttonVariants } from "~/components/ui/button";
 
 export const AuthScreen = () => {
   const router = useRouter();
