@@ -1,31 +1,31 @@
 import { useState } from "react";
 import {
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
+import Icon from "@/components/ui/icon";
 
-import { Screen } from "@/components/Screen";
 import { supabase } from "@/lib/supabase";
 
 const INTEREST_OPTIONS = [
-  "Music",
-  "Sports",
-  "Art",
-  "Food",
-  "Technology",
-  "Gaming",
-  "Fitness",
-  "Travel",
-  "Photography",
-  "Reading",
-  "Movies",
-  "Dancing",
+  { name: "Music", icon: "microphone" as const },
+  { name: "Sports", icon: "arm-flex" as const },
+  { name: "Art", icon: "image" as const },
+  { name: "Food", icon: "food-apple" as const },
+  { name: "Technology", icon: "access-point" as const },
+  { name: "Gaming", icon: "view-module" as const },
+  { name: "Fitness", icon: "arm-flex" as const },
+  { name: "Travel", icon: "earth" as const },
+  { name: "Photography", icon: "camera" as const },
+  { name: "Reading", icon: "clipboard-text" as const },
+  { name: "Movies", icon: "video-outline" as const },
+  { name: "Dancing", icon: "account-group" as const },
 ];
 
 export const ProfileSetupScreen = () => {
@@ -46,7 +46,7 @@ export const ProfileSetupScreen = () => {
 
   const handleContinue = async () => {
     if (!location.trim() || !age.trim()) {
-      alert("Please fill in all fields");
+      Alert.alert("Required Fields", "Please fill in all fields");
       return;
     }
 
@@ -55,7 +55,7 @@ export const ProfileSetupScreen = () => {
 
   const handleComplete = async () => {
     if (interests.length === 0) {
-      alert("Please select at least one interest");
+      Alert.alert("Select Interests", "Please select at least one interest");
       return;
     }
 
@@ -92,13 +92,15 @@ export const ProfileSetupScreen = () => {
       if (interestsError) throw interestsError;
 
       console.log("✅ Profile setup complete for user:", user.id);
-      alert("Profile setup complete!");
+      Alert.alert("Success", "Profile setup complete!");
 
-      // Navigate to home - the session provider will handle auth check
       router.replace("/(tabs)/home");
     } catch (error: any) {
       console.error("❌ Profile setup error:", error);
-      alert("Failed to save profile: " + (error.message || "Unknown error"));
+      Alert.alert(
+        "Error",
+        "Failed to save profile: " + (error.message || "Unknown error")
+      );
     } finally {
       setLoading(false);
     }
@@ -113,38 +115,49 @@ export const ProfileSetupScreen = () => {
   };
 
   return (
-    <Screen>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
+    <ScrollView
+      className="flex-1 bg-background"
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ flexGrow: 1 }}
+    >
+      <View className="flex-1 px-6 py-10">
         {/* Progress */}
-        <View style={styles.progressContainer}>
-          <Text style={styles.stepLabel}>Step {step} of 2</Text>
-          <View style={styles.progressBars}>
+        <View className="mb-8">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-muted-foreground text-sm font-medium">
+              Step {step} of 2
+            </Text>
+            <Text className="text-primary text-sm font-semibold">
+              {step === 1 ? "50%" : "100%"}
+            </Text>
+          </View>
+          <View className="flex-row gap-2 h-2">
             <View
-              style={[
-                styles.progressBar,
-                step >= 1 && styles.progressBarActive,
-              ]}
+              className={`flex-1 rounded-full ${
+                step >= 1 ? "bg-primary" : "bg-muted"
+              }`}
             />
             <View
-              style={[
-                styles.progressBar,
-                step >= 2 && styles.progressBarActive,
-              ]}
+              className={`flex-1 rounded-full ${
+                step >= 2 ? "bg-primary" : "bg-muted"
+              }`}
             />
           </View>
         </View>
 
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {step === 1
-              ? "Tell us about yourself"
-              : "What are you interested in?"}
+        <View className="mb-8">
+          <View className="bg-primary/20 w-16 h-16 rounded-2xl items-center justify-center mb-4">
+            <Icon
+              name={step === 1 ? "account-edit" : "heart"}
+              size={32}
+              color="rgb(4, 116, 56)"
+            />
+          </View>
+          <Text className="text-3xl font-black text-foreground mb-2">
+            {step === 1 ? "Tell us about yourself" : "What interests you?"}
           </Text>
-          <Text style={styles.subtitle}>
+          <Text className="text-base text-muted-foreground leading-6">
             {step === 1
               ? "Help us personalize your experience"
               : "Select your interests to find matching events"}
@@ -152,211 +165,188 @@ export const ProfileSetupScreen = () => {
         </View>
 
         {/* Content */}
-        <View style={styles.content}>
+        <View className="mb-10 flex-1">
           {step === 1 ? (
-            <>
+            <View className="gap-5">
               <View>
-                <Text style={styles.label}>Location</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., San Francisco, CA"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  value={location}
-                  onChangeText={setLocation}
-                  editable={!loading}
-                />
+                <View className="flex-row items-center gap-2 mb-2">
+                  <Icon
+                    name="map-marker-radius-outline"
+                    size={16}
+                    color="rgb(105, 105, 105)"
+                  />
+                  <Text className="text-muted-foreground font-semibold text-sm">
+                    Location
+                  </Text>
+                </View>
+                <View className="bg-card border border-muted rounded-2xl px-4 py-3.5 flex-row items-center">
+                  <TextInput
+                    className="flex-1 text-foreground text-base"
+                    placeholder="e.g., San Francisco, CA"
+                    placeholderTextColor="rgb(105, 105, 105)"
+                    value={location}
+                    onChangeText={setLocation}
+                    editable={!loading}
+                  />
+                </View>
               </View>
 
               <View>
-                <Text style={styles.label}>Age</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="25"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  value={age}
-                  onChangeText={setAge}
-                  keyboardType="number-pad"
-                  editable={!loading}
-                />
-              </View>
-            </>
-          ) : (
-            <View style={styles.interestsGrid}>
-              {INTEREST_OPTIONS.map((interest) => (
-                <TouchableOpacity
-                  key={interest}
-                  style={[
-                    styles.interestTag,
-                    interests.includes(interest) && styles.interestTagActive,
-                  ]}
-                  onPress={() => toggleInterest(interest)}
-                  disabled={loading}
-                >
-                  <Text
-                    style={[
-                      styles.interestTagText,
-                      interests.includes(interest) &&
-                        styles.interestTagTextActive,
-                    ]}
-                  >
-                    {interest}
+                <View className="flex-row items-center gap-2 mb-2">
+                  <Icon name="calendar" size={16} color="rgb(105, 105, 105)" />
+                  <Text className="text-muted-foreground font-semibold text-sm">
+                    Age
                   </Text>
-                </TouchableOpacity>
-              ))}
+                </View>
+                <View className="bg-card border border-muted rounded-2xl px-4 py-3.5 flex-row items-center">
+                  <TextInput
+                    className="flex-1 text-foreground text-base"
+                    placeholder="25"
+                    placeholderTextColor="rgb(105, 105, 105)"
+                    value={age}
+                    onChangeText={setAge}
+                    keyboardType="number-pad"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+
+              {/* Preview Card */}
+              {(location || age) && (
+                <View className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mt-2">
+                  <Text className="text-primary text-xs font-semibold uppercase tracking-wide mb-2">
+                    Preview
+                  </Text>
+                  <View className="gap-1">
+                    {location && (
+                      <View className="flex-row items-center gap-2">
+                        <Icon
+                          name="map-marker-radius-outline"
+                          size={14}
+                          color="rgb(4, 116, 56)"
+                        />
+                        <Text className="text-foreground text-sm">
+                          {location}
+                        </Text>
+                      </View>
+                    )}
+                    {age && (
+                      <View className="flex-row items-center gap-2">
+                        <Icon
+                          name="calendar"
+                          size={14}
+                          color="rgb(4, 116, 56)"
+                        />
+                        <Text className="text-foreground text-sm">
+                          {age} years old
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View className="gap-4">
+              {/* Selected Count */}
+              {interests.length > 0 && (
+                <View className="bg-primary/10 border border-primary/30 rounded-2xl p-4 flex-row items-center gap-3">
+                  <Icon
+                    name="check-circle-outline"
+                    size={24}
+                    color="rgb(4, 116, 56)"
+                  />
+                  <Text className="text-primary text-base font-semibold">
+                    {interests.length}{" "}
+                    {interests.length === 1 ? "interest" : "interests"} selected
+                  </Text>
+                </View>
+              )}
+
+              {/* Interest Grid */}
+              <View className="flex-row flex-wrap gap-3">
+                {INTEREST_OPTIONS.map((interest) => (
+                  <TouchableOpacity
+                    key={interest.name}
+                    className={`rounded-2xl px-4 py-3 border-2 flex-row items-center gap-2 ${
+                      interests.includes(interest.name)
+                        ? "bg-primary border-primary"
+                        : "bg-card border-muted"
+                    }`}
+                    onPress={() => toggleInterest(interest.name)}
+                    disabled={loading}
+                  >
+                    <Icon
+                      name={interest.icon}
+                      size={18}
+                      color={
+                        interests.includes(interest.name)
+                          ? "rgb(255, 255, 255)"
+                          : "rgb(4, 116, 56)"
+                      }
+                    />
+                    <Text
+                      className={`text-sm font-semibold ${
+                        interests.includes(interest.name)
+                          ? "text-primary-foreground"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {interest.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
         </View>
 
         {/* Buttons */}
-        <View style={styles.buttonContainer}>
+        <View className="flex-row gap-3 mt-auto">
           <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
+            className="flex-1 rounded-2xl py-4 items-center bg-card border-2 border-muted"
             onPress={handleBack}
             disabled={loading}
           >
-            <Text style={styles.secondaryButtonText}>
-              {step === 1 ? "Back" : "Back"}
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Icon name="chevron-left" size={20} color="rgb(105, 105, 105)" />
+              <Text className="text-muted-foreground font-semibold text-base">
+                Back
+              </Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.button,
-              styles.primaryButton,
-              loading && styles.buttonDisabled,
-            ]}
+            className={`flex-1 rounded-2xl py-4 items-center bg-primary ${
+              loading ? "opacity-60" : ""
+            }`}
             onPress={step === 1 ? handleContinue : handleComplete}
             disabled={loading}
+            style={{
+              shadowColor: "rgb(4, 116, 56)",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
           >
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.primaryButtonText}>
-                {step === 1 ? "Continue" : "Complete Setup"}
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-primary-foreground font-bold text-base">
+                  {step === 1 ? "Continue" : "Complete"}
+                </Text>
+                <Icon
+                  name={step === 1 ? "chevron-right" : "check-bold"}
+                  size={20}
+                  color="rgb(255, 255, 255)"
+                />
+              </View>
             )}
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </Screen>
+      </View>
+    </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-  progressContainer: {
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  stepLabel: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  progressBars: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 2,
-  },
-  progressBarActive: {
-    backgroundColor: "#7c3aed",
-  },
-  header: {
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "white",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.6)",
-    lineHeight: 20,
-  },
-  content: {
-    marginBottom: 40,
-    flex: 1,
-  },
-  label: {
-    color: "rgba(255,255,255,0.9)",
-    fontWeight: "600",
-    marginBottom: 8,
-    fontSize: 14,
-  },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: "white",
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  interestsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  interestTag: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  interestTagActive: {
-    backgroundColor: "#7c3aed",
-    borderColor: "#7c3aed",
-  },
-  interestTagText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  interestTagTextActive: {
-    color: "white",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: "auto",
-  },
-  button: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  primaryButton: {
-    backgroundColor: "#7c3aed",
-  },
-  primaryButtonText: {
-    color: "white",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  secondaryButton: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  secondaryButtonText: {
-    color: "rgba(255,255,255,0.7)",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-});

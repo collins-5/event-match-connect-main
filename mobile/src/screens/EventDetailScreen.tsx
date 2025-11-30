@@ -1,486 +1,336 @@
-import { useEffect, useState } from "react";
+// screens/EventDetailScreen.tsx
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-
+import { LinearGradient } from "expo-linear-gradient";
 import { Screen } from "@/components/Screen";
-import { supabase } from "@/lib/supabase";
-import { useSession } from "@/hooks/useSession";
+import Icon from "~/components/ui/icon";
+import { Button } from "~/components/ui/button";
+import { EventDetailSkeleton } from "~/components/core/skeletons/event-details-skeleton";
+import { useEventDetail } from "@/hooks/useEventDetail";
+import { UnattendEventSheet } from "~/components/ui/sheets/unattend-event-sheet";
+import { useState } from "react";
 
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-  event_date: string;
-  venue: string | null;
-  location: string | null;
-  image_url: string | null;
-  tags: string[] | null;
-}
-
-interface Attendee {
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-}
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export const EventDetailScreen = () => {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useSession();
+  const { id } = useLocalSearchParams() as { id: string };
+  const [showUnattendSheet, setShowUnattendSheet] = useState(false);
 
-  const [event, setEvent] = useState<Event | null>(null);
-  const [isGoing, setIsGoing] = useState(false);
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [attendeeCount, setAttendeeCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [toggleLoading, setToggleLoading] = useState(false);
+  const {
+    event,
+    isGoing,
+    attendees,
+    attendeeCount,
+    loading,
+    toggleLoading,
+    toggleAttendance, // This already handles API + state update
+  } = useEventDetail(id);
 
-  useEffect(() => {
-    if (id) {
-      loadEvent();
-      loadAttendanceStatus();
-      loadAttendees();
-    }
-  }, [id, user]);
-
-  const loadEvent = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) throw error;
-      setEvent(data);
-    } catch (error) {
-      console.error("❌ Failed to load event:", error);
-      Alert.alert("Error", "Failed to load event");
-    } finally {
-      setLoading(false);
+  // Smart button handler
+  const handleAttendancePress = () => {
+    if (isGoing) {
+      // Trying to remove → show confirmation
+      setShowUnattendSheet(true);
+    } else {
+      // Trying to join → do it instantly
+      toggleAttendance();
     }
   };
 
-  const loadAttendanceStatus = async () => {
-    if (!user) return;
-
-    try {
-      const { data } = await supabase
-        .from("event_attendees")
-        .select("*")
-        .eq("event_id", id)
-        .eq("user_id", user.id)
-        .eq("status", "going")
-        .maybeSingle();
-
-      setIsGoing(!!data);
-    } catch (error) {
-      console.error("❌ Failed to load attendance status:", error);
-    }
+  // Confirm removal → just call toggleAttendance (it knows we're currently going)
+  const confirmUnattend = () => {
+    toggleAttendance(); // This will set isGoing(false) + call API
+    setShowUnattendSheet(false);
   };
 
-  const loadAttendees = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("event_attendees")
-        .select(
-          `
-          user_id,
-          profiles:user_id (
-            full_name,
-            avatar_url
-          )
-        `
-        )
-        .eq("event_id", id)
-        .eq("status", "going");
-
-      if (error) throw error;
-
-      // Transform the data to flatten the profiles
-      const transformedAttendees =
-        data?.map((item: any) => ({
-          user_id: item.user_id,
-          full_name: item.profiles?.full_name || "Unknown",
-          avatar_url: item.profiles?.avatar_url,
-        })) || [];
-
-      setAttendees(transformedAttendees);
-      setAttendeeCount(transformedAttendees.length);
-    } catch (error) {
-      console.error("❌ Failed to load attendees:", error);
-    }
-  };
-
-  const toggleAttendance = async () => {
-    if (!user) {
-      Alert.alert("Error", "Please sign in first");
-      return;
-    }
-
-    setToggleLoading(true);
-    try {
-      if (isGoing) {
-        await supabase
-          .from("event_attendees")
-          .delete()
-          .eq("event_id", id)
-          .eq("user_id", user.id);
-        setIsGoing(false);
-        setAttendeeCount((prev) => Math.max(0, prev - 1));
-        Alert.alert("Success", "Removed from your events");
-      } else {
-        await supabase
-          .from("event_attendees")
-          .insert({ event_id: id, user_id: user.id, status: "going" });
-        setIsGoing(true);
-        setAttendeeCount((prev) => prev + 1);
-        Alert.alert("Success", "Added to your events!");
-      }
-      // Reload attendees
-      loadAttendees();
-    } catch (error) {
-      console.error("❌ Failed to toggle attendance:", error);
-      Alert.alert("Error", "Failed to update attendance");
-    } finally {
-      setToggleLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Screen>
-        <View style={styles.center}>
-          <ActivityIndicator color="#fff" size="large" />
-          <Text style={styles.loadingText}>Loading event…</Text>
-        </View>
-      </Screen>
-    );
-  }
+  if (loading) return <EventDetailSkeleton />;
 
   if (!event) {
     return (
       <Screen>
-        <View style={styles.center}>
-          <Text style={styles.errorText}>Unable to load event.</Text>
-        </View>
+        <Text className="text-muted-foreground text-lg">Event not found</Text>
       </Screen>
     );
   }
 
-  const eventDate = new Date(event.event_date).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
+  const eventDate = new Date(event.event_date);
+  const dateString = eventDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
     day: "numeric",
-    hour: "2-digit",
+  });
+  const timeString = eventDate.toLocaleTimeString("en-US", {
+    hour: "numeric",
     minute: "2-digit",
   });
 
   return (
-    <Screen>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text
-           style={styles.backButtonText} 
-          className="mb-4 text-red-500"
-          
-          >
-            ← Back
-          </Text>
-        </TouchableOpacity>
+    <View className="flex-1 bg-background">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
+        {/* Hero Image */}
+        <View className="relative">
+          {event.image_url ? (
+            <Image
+              source={{ uri: event.image_url }}
+              style={{ width: SCREEN_WIDTH, height: 320 }}
+              className="bg-muted"
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={{ width: SCREEN_WIDTH, height: 320 }}
+              className="bg-primary/20 items-center justify-center"
+            >
+              <Icon name="calendar" size={80} color="rgb(4, 116, 56)" />
+            </View>
+          )}
 
-        {/* Event Image */}
-        {event.image_url ? (
-          <Image source={{ uri: event.image_url }} style={styles.image} />
-        ) : (
-          <View style={[styles.image, styles.imagePlaceholder]} />
-        )}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.7)"]}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 140,
+            }}
+          />
 
-        {/* Event Content Card */}
-        <View style={styles.card}>
-          {/* Title and Tags */}
-          <Text style={styles.title}>{event.title}</Text>
+          {/* Back Button */}
+          <View className="absolute top-12 left-4">
+            <Button
+              variant="default"
+              className="rounded-full w-12  p-0 backdrop-blur"
+              onPress={() => router.back()}
+              leftIcon={<Icon name="arrow-left" size={24} color="white" className='ml-4' />}
+            />
+          </View>
 
+          {/* Title */}
+          <View className="absolute bottom-6 left-6 right-6">
+            <Text className="text-white text-3xl font-black leading-tight">
+              {event.title}
+            </Text>
+          </View>
+        </View>
+
+        <View className="px-6 pt-6">
+          {/* Tags */}
           {event.tags && event.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
+            <View className="flex-row flex-wrap gap-2 mb-6">
               {event.tags.map((tag, idx) => (
-                <View key={idx} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
+                <View
+                  key={idx}
+                  className="bg-accent/30 border border-accent rounded-full px-4 py-2"
+                >
+                  <Text className="text-primary text-xs font-semibold uppercase tracking-wide">
+                    {tag}
+                  </Text>
                 </View>
               ))}
             </View>
           )}
 
-          {/* Event Meta */}
-          <View style={styles.metaSection}>
-            <View style={styles.metaItem}>
-              <Text style={styles.metaIcon}>📅</Text>
-              <Text style={styles.metaText}>{eventDate}</Text>
+          {/* Info Cards */}
+          <View className="gap-3 mb-6">
+            {/* Date & Time */}
+            <View className="bg-card rounded-2xl p-4 border border-muted">
+              <View className="flex-row items-center gap-4">
+                <View className="bg-primary/20 w-12 h-12 rounded-xl items-center justify-center">
+                  <Icon
+                    name="calendar-clock"
+                    size={24}
+                    color="rgb(4, 116, 56)"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-1">
+                    Date & Time
+                  </Text>
+                  <Text className="text-foreground text-base font-semibold">
+                    {dateString}
+                  </Text>
+                  <Text className="text-muted-foreground text-sm">
+                    {timeString}
+                  </Text>
+                </View>
+              </View>
             </View>
 
-            {event.venue || event.location ? (
-              <View style={styles.metaItem}>
-                <Text style={styles.metaIcon}>📍</Text>
-                <Text style={styles.metaText}>
-                  {event.venue || event.location}
-                </Text>
+            {/* Location */}
+            {(event.venue || event.location) && (
+              <View className="bg-card rounded-2xl p-4 border border-muted">
+                <View className="flex-row items-center gap-4">
+                  <View className="bg-primary/20 w-12 h-12 rounded-xl items-center justify-center">
+                    <Icon
+                      name="map-marker-radius-outline"
+                      size={24}
+                      color="rgb(4, 116, 56)"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-1">
+                      Location
+                    </Text>
+                    <Text className="text-foreground text-base font-semibold">
+                      {event.venue || event.location}
+                    </Text>
+                  </View>
+                </View>
               </View>
-            ) : null}
+            )}
 
-            <View style={styles.metaItem}>
-              <Text style={styles.metaIcon}>👥</Text>
-              <Text style={styles.metaText}>{attendeeCount} going</Text>
+            <View className="bg-card rounded-2xl p-4 border border-muted">
+              <View className="flex-row items-center gap-4">
+                <View className="bg-primary/20 w-12 h-12 rounded-xl items-center justify-center">
+                  <Icon
+                    name="account-group"
+                    size={24}
+                    color="rgb(4, 116, 56)"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-1">
+                    Attendees
+                  </Text>
+                  <Text className="text-foreground text-base font-semibold">
+                    {attendeeCount} {attendeeCount === 1 ? "person" : "people"}{" "}
+                    going
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
           {/* Description */}
-          {event.description ? (
-            <View style={styles.descriptionSection}>
-              <Text style={styles.descriptionTitle}>About this event</Text>
-              <Text style={styles.descriptionText}>{event.description}</Text>
-            </View>
-          ) : null}
-
-          {/* Attendees Section */}
-          {attendees.length > 0 ? (
-            <View style={styles.attendeesSection}>
-              <Text style={styles.attendeesTitle}>
-                People Going ({attendees.length})
+          {event.description && (
+            <View className="mb-6">
+              <Text className="text-foreground text-lg font-bold mb-3">
+                About This Event
               </Text>
-              <View style={styles.attendeesList}>
-                {attendees.slice(0, 6).map((attendee) => (
-                  <View key={attendee.user_id} style={styles.attendeeItem}>
-                    <View style={styles.attendeeAvatar}>
+              <Text className="text-foreground/80 text-base leading-7">
+                {event.description}
+              </Text>
+            </View>
+          )}
+
+          {/* Attendees List */}
+          {attendees.length > 0 && (
+            <View className="mb-6">
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-foreground text-lg font-bold">
+                  Who's Going
+                </Text>
+                <Text className="text-primary text-sm font-semibold">
+                  {attendees.length}{" "}
+                  {attendees.length === 1 ? "person" : "people"}
+                </Text>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 16, paddingRight: 24 }}
+              >
+                {attendees.map((attendee) => (
+                  <TouchableOpacity
+                    key={attendee.user_id}
+                    onPress={() => {
+                      router.push(`/public-profile/${attendee.user_id}`);
+                    }}
+                    className="items-center gap-2"
+                    style={{ width: 80 }}
+                    activeOpacity={0.7}
+                  >
+                    <View className="relative">
                       {attendee.avatar_url ? (
                         <Image
                           source={{ uri: attendee.avatar_url }}
-                          style={styles.avatarImage}
+                          className="w-16 h-16 rounded-full border-2 border-primary/30"
                         />
                       ) : (
-                        <Text style={styles.avatarInitial}>
-                          {attendee.full_name
-                            ?.split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2) || "?"}
-                        </Text>
+                        <View className="w-16 h-16 rounded-full bg-primary justify-center items-center border-2 border-primary/50">
+                          <Text className="text-primary-foreground text-lg font-bold">
+                            {attendee.full_name
+                              ?.split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2) || "?"}
+                          </Text>
+                        </View>
                       )}
                     </View>
-                    <Text style={styles.attendeeName} numberOfLines={1}>
+                    <Text
+                      className="text-foreground text-xs text-center font-medium"
+                      numberOfLines={2}
+                    >
                       {attendee.full_name}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
-              </View>
-              {attendees.length > 6 && (
-                <Text style={styles.moreAttendees}>
-                  +{attendees.length - 6} more people
-                </Text>
-              )}
+              </ScrollView>
             </View>
-          ) : null}
-
-          {/* Action Button */}
-          <TouchableOpacity
-            style={[
-              styles.button,
-              isGoing ? styles.buttonSecondary : styles.buttonPrimary,
-            ]}
-            onPress={toggleAttendance}
-            disabled={toggleLoading}
-          >
-            {toggleLoading ? (
-              <ActivityIndicator color={isGoing ? "#fff" : "#fff"} />
-            ) : (
-              <Text style={styles.buttonText}>
-                {isGoing ? "Not Going" : "I'm Going!"}
-              </Text>
-            )}
-          </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
-    </Screen>
+
+      {/* Fixed Bottom Button */}
+      <View className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-background">
+        <TouchableOpacity
+          onPress={handleAttendancePress}
+          disabled={toggleLoading}
+          className={`rounded-2xl py-5 items-center flex-row justify-center gap-3 ${
+            isGoing ? "bg-muted border-2 border-primary" : "bg-primary"
+          }`}
+          style={{
+            shadowColor: isGoing ? "transparent" : "rgb(4, 116, 56)",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.34,
+            shadowRadius: 12,
+            elevation: 12,
+          }}
+        >
+          {toggleLoading ? (
+            <ActivityIndicator color={isGoing ? "rgb(4, 116, 56)" : "white"} />
+          ) : (
+            <>
+              <Icon
+                name={isGoing ? "check-circle-outline" : "calendar-clock"}
+                size={24}
+                color={isGoing ? "rgb(4, 116, 56)" : "white"}
+              />
+              <Text
+                className={`text-lg font-bold ${
+                  isGoing ? "text-primary" : "text-primary-foreground"
+                }`}
+              >
+                {isGoing ? "You're Going!" : "I'm Going!"}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Confirmation Sheet */}
+      <UnattendEventSheet
+        visible={showUnattendSheet}
+        isLoading={toggleLoading}
+        onConfirm={confirmUnattend}
+        onClose={() => setShowUnattendSheet(false)}
+      />
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-  },
-  loadingText: {
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 8,
-  },
-  errorText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 16,
-  },
-  backButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-    marginBottom: 16,
-  },
-  backButtonText: {
-    color: "#7c3aed",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  image: {
-    width: "100%",
-    height: 240,
-    borderRadius: 16,
-    marginBottom: 16,
-  },
-  imagePlaceholder: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 16,
-    padding: 20,
-    gap: 20,
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "white",
-  },
-  tagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  tag: {
-    backgroundColor: "rgba(124,58,237,0.3)",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  tagText: {
-    color: "#a78bfa",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  metaSection: {
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    paddingTop: 12,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  metaIcon: {
-    fontSize: 20,
-  },
-  metaText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-    flex: 1,
-  },
-  descriptionSection: {
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    paddingTop: 12,
-  },
-  descriptionTitle: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  descriptionText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  attendeesSection: {
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    paddingTop: 12,
-  },
-  attendeesTitle: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  attendeesList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-  },
-  attendeeItem: {
-    alignItems: "center",
-    width: "30%",
-    gap: 6,
-  },
-  attendeeAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(124,58,237,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  avatarInitial: {
-    color: "#a78bfa",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  attendeeName: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  moreAttendees: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    fontStyle: "italic",
-  },
-  button: {
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonPrimary: {
-    backgroundColor: "#7c3aed",
-  },
-  buttonSecondary: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});

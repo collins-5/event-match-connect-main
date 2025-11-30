@@ -1,448 +1,354 @@
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+// screens/ProfileScreen.tsx (or wherever you have it)
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
+import Icon from "@/components/ui/icon";
 
 import { Screen } from "@/components/Screen";
 import { useSession } from "@/hooks/useSession";
-import { supabase } from "@/lib/supabase";
+import { LogoutSheet } from "~/components/ui/sheets/logout-sheet";
+import { ProfileScreenSkeleton } from "~/components/core/skeletons/profile-skeleton";
+import { useProfile } from "@/hooks/useProfile";
+import { InterestTag } from "~/components/core/interest";
 
-interface Profile {
-  full_name: string | null;
-  location: string | null;
-  age: number | null;
-  bio: string | null;
-  avatar_url: string | null;
-}
-
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-  event_date: string;
-  venue: string | null;
-  location: string | null;
-  image_url: string | null;
-  tags: string[] | null;
-}
+// Import the reusable InterestTag
 
 export const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useSession();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [interests, setInterests] = useState<string[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"profile" | "going">("profile");
-
-  useEffect(() => {
-    if (user) {
-      loadProfile(user.id);
-      loadInterests(user.id);
-      loadGoingEvents(user.id);
-    }
-  }, [user]);
-
-  const loadProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
-    } catch (error: any) {
-      console.error("Failed to load profile:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadInterests = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("user_interests")
-        .select("interest")
-        .eq("user_id", userId);
-
-      if (error) throw error;
-      setInterests(data?.map((i: any) => i.interest) || []);
-    } catch (error: any) {
-      console.error("Failed to load interests:", error);
-    }
-  };
-
-  const loadGoingEvents = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("event_attendees")
-        .select(
-          `
-          events:event_id (
-            id,
-            title,
-            description,
-            event_date,
-            venue,
-            location,
-            image_url,
-            tags
-          )
-        `
-        )
-        .eq("user_id", userId)
-        .eq("status", "going");
-
-      if (error) throw error;
-
-      // Transform the data to flatten events
-      const transformedEvents =
-        data?.map((item: any) => item.events).filter(Boolean) || [];
-
-      setEvents(transformedEvents);
-    } catch (error: any) {
-      console.error("Failed to load going events:", error);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error: any) {
-      console.error("Sign out error:", error);
-    }
-  };
+  const {
+    profile,
+    interests,
+    events,
+    loading,
+    activeTab,
+    setActiveTab,
+    logout,
+    setLogout,
+    handleSignOut,
+    initials,
+  } = useProfile();
 
   if (loading) {
-    return (
-      <Screen>
-        <View style={styles.center}>
-          <ActivityIndicator color="#fff" size="large" />
-        </View>
-      </Screen>
-    );
+    return <ProfileScreenSkeleton />;
   }
 
-  const initials =
-    profile?.full_name
-      ?.split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase() || "?";
-
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Screen>
-        {/* Tabs */}
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "profile" && styles.tabActive]}
-            onPress={() => setActiveTab("profile")}
-          >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "profile" && styles.tabLabelActive,
-              ]}
-            >
-              Profile
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "going" && styles.tabActive]}
-            onPress={() => setActiveTab("going")}
-          >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "going" && styles.tabLabelActive,
-              ]}
-            >
-              Going ({events.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Profile Tab */}
-        {activeTab === "profile" ? (
-          <>
-            <View style={styles.card}>
-              <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  {profile?.avatar_url ? (
-                    <Image
-                      source={{ uri: profile.avatar_url }}
-                      style={styles.avatarImage}
-                    />
-                  ) : (
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  )}
-                </View>
-                <View>
-                  <Text style={styles.headline}>
-                    {profile?.full_name || "User Profile"}
+    <>
+      <ScrollView
+        className="flex-1 bg-background"
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="px-6 pt-6 pb-10">
+          {/* Header with Avatar */}
+          <View className="items-center mb-6">
+            <View className="relative mb-4">
+              <View className="w-24 h-24 rounded-full bg-primary/20 justify-center items-center overflow-hidden border-4 border-primary/30">
+                {profile?.avatar_url ? (
+                  <Image
+                    source={{ uri: profile.avatar_url }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text className="text-primary text-3xl font-bold">
+                    {initials}
                   </Text>
-                  <Text style={styles.subtext}>{user?.email}</Text>
-                </View>
+                )}
               </View>
+
+              <TouchableOpacity
+                className="absolute bottom-0 right-0 bg-primary rounded-full w-8 h-8 items-center justify-center border-2 border-background"
+                onPress={() => router.push("/(auth)/profile-edit")}
+              >
+                <Icon name="account-edit" size={16} color="white" />
+              </TouchableOpacity>
             </View>
 
-            {profile?.bio && (
-              <View style={styles.card}>
-                <Text style={styles.label}>Bio</Text>
-                <Text style={styles.value}>{profile.bio}</Text>
-              </View>
-            )}
+            <Text className="text-foreground text-2xl font-bold mb-1">
+              {profile?.full_name || "User Profile"}
+            </Text>
+            <Text className="text-muted-foreground text-sm">{user?.email}</Text>
+          </View>
 
-            {profile?.location && (
-              <View style={styles.card}>
-                <Text style={styles.label}>Location</Text>
-                <Text style={styles.value}>{profile.location}</Text>
-              </View>
-            )}
+          {/* Tabs
+          <View className="flex-row gap-2 mb-6 bg-muted rounded-full p-1">
+            <TouchableOpacity
+              className={`flex-1 py-2.5 items-center rounded-full ${
+                activeTab === "profile" ? "bg-background shadow-sm" : ""
+              }`}
+              onPress={() => setActiveTab("profile")}
+            >
+              <Text
+                className={`text-sm font-semibold ${
+                  activeTab === "profile" ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Profile
+              </Text>
+            </TouchableOpacity>
 
-            {profile?.age && (
-              <View style={styles.card}>
-                <Text style={styles.label}>Age</Text>
-                <Text style={styles.value}>{profile.age}</Text>
-              </View>
-            )}
+            <TouchableOpacity
+              className={`flex-1 py-2.5 items-center rounded-full ${
+                activeTab === "going" ? "bg-background shadow-sm" : ""
+              }`}
+              onPress={() => setActiveTab("going")}
+            >
+              <Text
+                className={`text-sm font-semibold ${
+                  activeTab === "going" ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Going ({events.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-            {interests.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.label}>Interests</Text>
-                <View style={styles.interestsList}>
-                  {interests.map((interest, index) => (
-                    <View key={index} style={styles.interestBadge}>
-                      <Text style={styles.interestText}>{interest}</Text>
-                    </View>
-                  ))}
+          {/* Profile Tab Content */}
+          {activeTab === "profile" ? (
+            <>
+              {/* Stats Cards */}
+              <View className="flex-row gap-3 mb-6">
+                <TouchableOpacity
+                  className="flex-1 bg-card border border-muted rounded-2xl p-4 items-center"
+                  onPress={() => router.push("/my-events")}
+                >
+                  <Icon
+                    name="calendar-clock"
+                    size={24}
+                    color="rgb(4, 116, 56)"
+                  />
+                  <Text className="text-foreground text-2xl font-bold mt-2">
+                    {events.length}
+                  </Text>
+                  <Text className="text-muted-foreground text-xs">
+                    Events Going
+                  </Text>
+                </TouchableOpacity>
+
+                <View className="flex-1 bg-card border border-muted rounded-2xl p-4 items-center">
+                  <Icon name="heart" size={24} color="rgb(4, 116, 56)" />
+                  <Text className="text-foreground text-2xl font-bold mt-2">
+                    {interests.length}
+                  </Text>
+                  <Text className="text-muted-foreground text-xs">
+                    Interests
+                  </Text>
                 </View>
               </View>
-            )}
 
-            <TouchableOpacity style={styles.signOut} onPress={handleSignOut}>
-              <Text style={styles.signOutLabel}>Sign Out</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            {events.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  You're not going to any events yet.
-                </Text>
-                <Text style={styles.emptyStateSubtext}>
-                  Explore events and mark them as going!
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.eventsList}>
-                {events.map((event) => (
-                  <TouchableOpacity
-                    key={event.id}
-                    style={styles.eventCard}
-                    onPress={() => router.push(`/event/${event.id}`)}
-                  >
-                    {event.image_url ? (
-                      <Image
-                        source={{ uri: event.image_url }}
-                        style={styles.eventImage}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.eventImage,
-                          styles.eventImagePlaceholder,
-                        ]}
-                      />
-                    )}
-                    <View style={styles.eventContent}>
-                      <Text style={styles.eventTitle} numberOfLines={2}>
-                        {event.title}
-                      </Text>
-                      <Text style={styles.eventMeta}>
-                        {new Date(event.event_date).toLocaleDateString()} •{" "}
-                        {event.venue || event.location || "TBA"}
-                      </Text>
+              {/* Bio */}
+              {profile?.bio && (
+                <View className="bg-card border border-muted rounded-2xl p-5 mb-4">
+                  <View className="flex-row items-center gap-2 mb-3">
+                    <Icon
+                      name="clipboard-text"
+                      size={18}
+                      color="rgb(4, 116, 56)"
+                    />
+                    <Text className="text-muted-foreground uppercase text-xs font-semibold tracking-wider">
+                      About Me
+                    </Text>
+                  </View>
+                  <Text className="text-foreground text-base leading-6">
+                    {profile.bio}
+                  </Text>
+                </View>
+              )}
+
+              {/* Location & Age */}
+              <View className="gap-3 mb-4">
+                {profile?.location && (
+                  <View className="bg-card border border-muted rounded-2xl p-4">
+                    <View className="flex-row items-center gap-3">
+                      <View className="bg-primary/20 w-10 h-10 rounded-xl items-center justify-center">
+                        <Icon
+                          name="map-marker-radius-outline"
+                          size={20}
+                          color="rgb(4, 116, 56)"
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">
+                          Location
+                        </Text>
+                        <Text className="text-foreground text-base font-semibold">
+                          {profile.location}
+                        </Text>
+                      </View>
                     </View>
-                  </TouchableOpacity>
-                ))}
+                  </View>
+                )}
+
+                {profile?.age && (
+                  <View className="bg-card border border-muted rounded-2xl p-4">
+                    <View className="flex-row items-center gap-3">
+                      <View className="bg-primary/20 w-10 h-10 rounded-xl items-center justify-center">
+                        <Icon
+                          name="calendar"
+                          size={20}
+                          color="rgb(4, 116, 56)"
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">
+                          Age
+                        </Text>
+                        <Text className="text-foreground text-base font-semibold">
+                          {profile.age} years old
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
-            )}
-          </>
-        )}
-      </Screen>
-    </ScrollView>
+
+              {/* Interests — NOW USING REUSABLE InterestTag */}
+              {interests.length > 0 && (
+                <View className="bg-card border border-muted rounded-2xl p-5 mb-6">
+                  <View className="flex-row items-center gap-2 mb-4">
+                    <Icon name="heart" size={18} color="rgb(4, 116, 56)" />
+                    <Text className="text-muted-foreground uppercase text-xs font-semibold tracking-wider">
+                      Interests
+                    </Text>
+                  </View>
+
+                  <View className="flex-row flex-wrap gap-2">
+                    {interests.map((interest) => (
+                      <InterestTag
+                        key={interest}
+                        name={interest}
+                        selected={true} // always highlighted on profile
+                        size="md"
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Sign Out Button */}
+              <TouchableOpacity
+                className="bg-destructive/10 border-2 border-destructive/30 rounded-2xl p-4 items-center"
+                onPress={() => setLogout(true)}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Icon
+                    name="account-switch-outline"
+                    size={20}
+                    color="rgb(239, 68, 68)"
+                  />
+                  <Text className="text-destructive text-base font-bold">
+                    Sign Out
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : (
+            /* Going Tab Content - unchanged */
+            <>
+              {events.length === 0 ? (
+                <View className="items-center justify-center py-16 gap-4">
+                  <View className="bg-muted/50 w-20 h-20 rounded-full items-center justify-center">
+                    <Icon
+                      name="calendar"
+                      size={40}
+                      color="rgb(105, 105, 105)"
+                    />
+                  </View>
+                  <Text className="text-foreground text-lg font-semibold">
+                    No events yet
+                  </Text>
+                  <Text className="text-muted-foreground text-sm text-center px-8">
+                    Explore events and mark them as going to see them here!
+                  </Text>
+                  <TouchableOpacity
+                    className="bg-primary rounded-full px-6 py-3 mt-2"
+                    onPress={() => router.push("/(tabs)")}
+                  >
+                    <Text className="text-primary-foreground font-semibold">
+                      Explore Events
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View className="gap-3 pb-6">
+                  {events.map((event) => (
+                    <TouchableOpacity
+                      key={event.id}
+                      className="bg-card border border-muted rounded-2xl overflow-hidden"
+                      onPress={() => router.push(`/event/${event.id}`)}
+                    >
+                      <View className="flex-row">
+                        {event.image_url ? (
+                          <Image
+                            source={{ uri: event.image_url }}
+                            className="w-28 h-28"
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View className="w-28 h-28 bg-primary/10 items-center justify-center">
+                            <Icon
+                              name="calendar"
+                              size={32}
+                              color="rgb(4, 116, 56)"
+                            />
+                          </View>
+                        )}
+                        <View className="flex-1 p-4 justify-between">
+                          <View>
+                            <Text
+                              className="text-foreground text-base font-bold mb-1"
+                              numberOfLines={2}
+                            >
+                              {event.title}
+                            </Text>
+                            <View className="flex-row items-center gap-1 mb-1">
+                              <Icon
+                                name="calendar-clock"
+                                size={14}
+                                color="rgb(105, 105, 105)"
+                              />
+                              <Text className="text-muted-foreground text-xs">
+                                {new Date(event.event_date).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                  }
+                                )}
+                              </Text>
+                            </View>
+                            {(event.venue || event.location) && (
+                              <View className="flex-row items-center gap-1">
+                                <Icon
+                                  name="map-marker-radius-outline"
+                                  size={14}
+                                  color="rgb(105, 105, 105)"
+                                />
+                                <Text
+                                  className="text-muted-foreground text-xs"
+                                  numberOfLines={1}
+                                >
+                                  {event.venue || event.location}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      </ScrollView>
+
+      <LogoutSheet
+        visible={logout}
+        onClose={() => setLogout(false)}
+        handleSignOut={handleSignOut}
+      />
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  tabs: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  tab: {
-    flex: 1,
-    paddingBottom: 12,
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  tabActive: {
-    borderBottomColor: "#7c3aed",
-  },
-  tabLabel: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  tabLabelActive: {
-    color: "#7c3aed",
-    fontWeight: "700",
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius: 16,
-    padding: 20,
-    gap: 12,
-    marginBottom: 16,
-  },
-  avatarContainer: {
-    flexDirection: "row",
-    gap: 16,
-    alignItems: "center",
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-  avatarText: {
-    color: "white",
-    fontSize: 24,
-    fontWeight: "700",
-  },
-  headline: {
-    fontSize: 20,
-    color: "white",
-    fontWeight: "700",
-  },
-  subtext: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.6)",
-  },
-  label: {
-    color: "rgba(255,255,255,0.6)",
-    textTransform: "uppercase",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  value: {
-    color: "white",
-    fontSize: 16,
-  },
-  interestsList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  interestBadge: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  interestText: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 14,
-  },
-  signOut: {
-    backgroundColor: "rgba(255,59,48,0.2)",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  signOutLabel: {
-    color: "#FF3B30",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    gap: 8,
-  },
-  emptyStateText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  emptyStateSubtext: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 14,
-  },
-  eventsList: {
-    gap: 12,
-    marginBottom: 40,
-  },
-  eventCard: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 12,
-    overflow: "hidden",
-    flexDirection: "row",
-    height: 120,
-  },
-  eventImage: {
-    width: 120,
-    height: 120,
-  },
-  eventImagePlaceholder: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
-  eventContent: {
-    flex: 1,
-    padding: 12,
-    justifyContent: "space-between",
-  },
-  eventTitle: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  eventMeta: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-  },
-});

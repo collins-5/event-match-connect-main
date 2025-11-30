@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import BackgroundImage from "@/components/background-image";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -61,7 +62,8 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
-      <Card className="w-full max-w-md shadow-elevated">
+      <BackgroundImage/>
+      <Card className="w-full max-w-md z-50 shadow-elevated">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
             <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
@@ -72,7 +74,9 @@ const Auth = () => {
             EventMatch
           </CardTitle>
           <CardDescription className="text-center">
-            {isLogin ? "Welcome back! Sign in to your account" : "Create an account to get started"}
+            {isLogin
+              ? "Welcome back! Sign in to your account"
+              : "Create an account to get started"}
           </CardDescription>
         </CardHeader>
         <CardContent>

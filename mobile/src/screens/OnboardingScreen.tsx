@@ -30,7 +30,6 @@ export const OnboardingScreen = () => {
     );
   }
 
-  // Show app intro if not authenticated
   if (!user) {
     return <AppIntroScreen />;
   }

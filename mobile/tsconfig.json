@@ -4,17 +4,15 @@
     "strict": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
-    "skipLibCheck": true,
     "paths": {
       "~/*": ["./src/*"],
       "@/*": ["./src/*"],
-      "@assets/*": ["assets/*"]
+      "@assets/*": ["assets/*"]  // ← ADD THIS LINE
     },
     "types": [
       "react",
       "react-native",
-      "react-native-reanimated",
-      "node"
+      "react-native-reanimated"
     ]
   },
   "include": [
