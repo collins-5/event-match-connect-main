@@ -97,13 +97,13 @@ export default function SignInScreen() {
               </View>
 
               {/* Global Error */}
-              {error ? (
-                <View className="rounded-2xl px-4 py-3 mb-2">
+              <View className="rounded-2xl px-4 h-4 mb-2">
+                {error ? (
                   <Text className="text-destructive text-center text-sm font-medium">
                     {error}
                   </Text>
-                </View>
-              ) : null}
+                ) : null}
+              </View>
 
               {/* Form */}
               <View className="gap-5">
