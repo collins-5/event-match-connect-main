@@ -19,7 +19,8 @@
     }
 
     .bg-primary {
-        background-color: rgb(19, 148, 19);
+        /*teal-900*/
+        background-color: rgb(4, 116, 56);
         /* As specified */
     }
     .bg-foreground {
@@ -37,8 +38,17 @@
         /* White for all foregrounds */
     }
 
+    .bg-secondary {
+        background-color: rgb(105, 103, 103);
+        /* Light gray for secondary */
+    }
+
     .bg-muted {
         background-color: rgb(211, 211, 211);
+        /* Light gray for muted */
+    }
+    .bg-muted-foreground {
+        background-color: rgb(97, 94, 94);
         /* Light gray for muted */
     }
 
@@ -86,7 +96,7 @@
     }
 
     .border-primary {
-        border-color: rgb(0, 255, 119);
+        border-color: rgb(4, 116, 56);
         /* Primary color for primary border */
     }
 

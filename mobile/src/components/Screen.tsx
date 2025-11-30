@@ -9,23 +9,24 @@ type ScreenProps = {
 export const Screen = ({ children, scrollable = true }: ScreenProps) => {
   if (scrollable) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+      <SafeAreaView className="flex-1 bg-muted">
+        <ScrollView 
+          contentContainerStyle={styles.content}
+          className="flex-grow"
+        >
+          {children}
+        </ScrollView>
       </SafeAreaView>
     );
   }
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.content}>{children}</View>
+    <SafeAreaView className="flex-1 bg-muted">
+      <View className="flex-grow px-4 py-3 gap-3">{children}</View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#04030f"
-  },
   content: {
     flexGrow: 1,
     paddingHorizontal: 16,

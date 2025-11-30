@@ -1,7 +1,17 @@
 import { memo } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, Text, View, Platform } from "react-native";
 
 import type { Event } from "@/hooks/useEvents";
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Icon from "./ui/icon";
 
 type Props = {
   event: Event;
@@ -9,54 +19,68 @@ type Props = {
 
 const EventCardComponent = ({ event }: Props) => {
   return (
-    <View style={styles.card}>
+    <Card className="overflow-hidden rounded-2xl border my-1 shadow-xl shadow-black/20">
+      {/* Event Image or Placeholder */}
       {event.image_url ? (
-        <Image source={{ uri: event.image_url }} style={styles.image} />
+        <Image
+          source={{ uri: event.image_url }}
+          className="h-48 w-full"
+          resizeMode="cover"
+        />
       ) : (
-        <View style={[styles.image, styles.imagePlaceholder]} />
+        <View className="h-48 w-full bg-gradient-to-br from-purple-600/20 to-blue-600/20" />
       )}
-      <View style={styles.body}>
-        <Text style={styles.title}>{event.title}</Text>
-        {event.description ? <Text style={styles.description}>{event.description}</Text> : null}
-        <Text style={styles.meta}>
-          {event.venue ?? "TBA"} • {new Date(event.event_date).toLocaleDateString()}
-        </Text>
-      </View>
-    </View>
+
+      {/* Card Content */}
+      <CardHeader withSeparator>
+        <CardTitle className="">{event.title}</CardTitle>
+        {event.description ? (
+          <CardDescription className="">{event.description}</CardDescription>
+        ) : null}
+      </CardHeader>
+      <CardFooter className="pb-4 mt-2">
+        <View>
+          <View className="flex-row items-center">
+            <Icon name="map-marker-radius-outline" size={18} color="#64748b" />
+
+            <Text className="ml-2 text-xs ">
+              {event.venue ?? "Venue TBA"} •{" "}
+            </Text>
+            <Icon name="calendar-clock" size={18} color="#64748b" />
+
+            <Text className="ml-2 text-xs ">
+              {new Date(event.event_date).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })}
+            </Text>
+          </View>
+          <View>
+            {event.tags && event.tags.length > 0 && (
+              <View className="flex-row flex-wrap gap-2 mt-4 -mb-2">
+                {event.tags.slice(0, 4).map((tag, i) => (
+                  <View
+                    key={i}
+                    className="bg-primary/10 px-3 py-1.5 rounded-full border border-primary/30"
+                  >
+                    <Text className="text-primary text-xs font-semibold">
+                      {tag}
+                    </Text>
+                  </View>
+                ))}
+                {event.tags.length > 4 && (
+                  <Text className="text-muted-foreground text-xs self-center">
+                    +{event.tags.length - 4}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+      </CardFooter>
+    </Card>
   );
 };
 
 export const EventCard = memo(EventCardComponent);
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 16,
-    overflow: "hidden"
-  },
-  image: {
-    width: "100%",
-    height: 180
-  },
-  imagePlaceholder: {
-    backgroundColor: "rgba(255,255,255,0.1)"
-  },
-  body: {
-    padding: 16,
-    gap: 6
-  },
-  title: {
-    fontSize: 16,
-    color: "white",
-    fontWeight: "600"
-  },
-  description: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14
-  },
-  meta: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12
-  }
-});
-

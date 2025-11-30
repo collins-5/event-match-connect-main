@@ -1,302 +1,148 @@
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { TouchableOpacity } from "react-native-gesture-handler";
 
 import { EventCard } from "@/components/EventCard";
-import { Screen } from "@/components/Screen";
 import { useSession } from "@/hooks/useSession";
-import { supabase } from "@/lib/supabase";
+import SkeletonList from "@/components/core/SkeletonList";
+import { EventCardSkeleton } from "~/components/core/skeletons/event-card-skeleton";
+import { useHomeScreen } from "@/hooks/useHomeScreen";
+import Icon from "~/components/ui/icon";
+import { Image } from "expo-image";
+import { useProfile } from "~/hooks/useProfile";
+import { GoingEventCard } from "~/components/GoingEventCard";
+import { GoingEventCardSkeleton } from "~/components/core/skeletons/GoingEventCardSkeleton";
+import { HomeHeader } from "~/components/core/home-header";
+import { Button } from "~/components/ui/button";
+import NoResultFound from "~/components/core/no-results-found";
 
-interface Profile {
-  full_name: string | null;
-}
-
-interface Event {
+type Event = {
   id: string;
   title: string;
-  description: string | null;
   event_date: string;
-  venue: string | null;
-  location: string | null;
-  image_url: string | null;
-  tags: string[] | null;
-}
+  venue?: string | null;
+  location?: string | null;
+  image_url?: string | null;
+};
 
 export const HomeScreen = () => {
   const router = useRouter();
   const { user } = useSession();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadProfile(user.id);
-      loadEvents();
-    }
-  }, [user]);
+  const {
+    events: recommendedEvents,
+    isLoading: isLoadingRecommended,
+    userName,
+    refetch,
+  } = useHomeScreen();
 
-  const loadProfile = async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", userId)
-        .single();
-
-      if (data) {
-        setProfile(data);
-      }
-    } catch (error) {
-      console.error("Failed to load profile:", error);
-    }
-  };
-
-  const loadEvents = async () => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .order("event_date", { ascending: true })
-        .limit(20);
-
-      if (error) throw error;
-      setEvents(data || []);
-    } catch (error) {
-      console.error("Failed to load events:", error);
-      Alert.alert("Error", "Failed to load events");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refetch = () => {
-    loadEvents();
-  };
-
-  const getAISuggestions = async () => {
-    if (!user || suggestionsLoading || events.length === 0) return;
-
-    setSuggestionsLoading(true);
-    try {
-      // Get user interests
-      const { data: userInterests } = await supabase
-        .from("user_interests")
-        .select("interest")
-        .eq("user_id", user.id);
-
-      const interestsList = (userInterests || []).map((ui: any) => ui.interest);
-
-      const prompt =
-        interestsList.length > 0
-          ? `Based on a user interested in: ${interestsList.join(", ")}, suggest the 3 best events for them. Consider timing, relevance, and vibe match. Provide specific reasons why each event would be perfect.\n\nAvailable events:\n${events
-              .map(
-                (e: any) =>
-                  `- ${e.title} (${e.event_date}) at ${e.venue || e.location}${
-                    e.description ? " - " + e.description : ""
-                  }`
-              )
-              .join("\n")}`
-          : `Based on the available events, suggest 3 well-organized events with good timing and variety.\n\nAvailable events:\n${events
-              .map(
-                (e: any) =>
-                  `- ${e.title} (${e.event_date}) at ${e.venue || e.location}${
-                    e.description ? " - " + e.description : ""
-                  }`
-              )
-              .join("\n")}`;
-
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        Alert.alert("Error", "Supabase configuration is missing");
-        return;
-      }
-
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/matchbot-chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: "user",
-                content: prompt,
-              },
-            ],
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to get AI suggestions");
-      }
-
-      // Stream the response
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let suggestion = "";
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.trim() || line.startsWith(":")) continue;
-            if (!line.startsWith("data: ")) continue;
-
-            const dataStr = line.slice(6);
-            if (dataStr === "[DONE]") continue;
-
-            try {
-              const parsed = JSON.parse(dataStr);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                suggestion += delta;
-              }
-            } catch (e) {
-              console.error("Failed to parse SSE data:", e);
-            }
-          }
-        }
-      }
-
-      if (suggestion) {
-        Alert.alert("AI Suggestions", suggestion.substring(0, 200) + "...");
-      }
-    } catch (error: any) {
-      console.error("AI suggestions error:", error);
-      Alert.alert("Error", "Failed to generate AI suggestions");
-    } finally {
-      setSuggestionsLoading(false);
-    }
-  };
-
-  const userName = profile?.full_name?.split(" ")[0] || "Friend";
+  const {
+    profile,
+    initials,
+    events: goingEvents = [], // ← Now correctly typed + default
+    loading: isLoadingGoing,
+  } = useProfile();
 
   return (
-    <Screen>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>EventMatch</Text>
-          <Text style={styles.subtitle}>
-            Discover events that match your vibe
-          </Text>
-          {user && (
-            <Text style={styles.greeting}>Welcome back, {userName}!</Text>
-          )}
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={[
-          styles.suggestButton,
-          (suggestionsLoading || events.length === 0) &&
-            styles.suggestButtonDisabled,
-        ]}
-        onPress={getAISuggestions}
-        disabled={suggestionsLoading || events.length === 0}
-      >
-        <Text style={styles.suggestText}>
-          {suggestionsLoading ? "Generating..." : "✨ Get AI Suggestions"}
+    <View className="flex-1 bg-primary">
+      <HomeHeader
+        userName={userName}
+        initials={initials}
+        avatarUrl={profile?.avatar_url}
+        loading={isLoadingGoing}
+      />
+      <View className="flex-1 bg-muted  px-4 pt-6">
+        <Text className="text-2xl font-bold text-foreground">
+          My Upcoming Events
         </Text>
-      </TouchableOpacity>
+        {isLoadingGoing ? (
+          <SkeletonList count={1} skeletonComponent={GoingEventCardSkeleton} />
+        ) : (
+          <View className="">
+            <FlashList
+              data={goingEvents}
+              keyExtractor={(item) => item.id}
+              estimatedItemSize={200}
+              showsHorizontalScrollIndicator={false}
+              horizontal={true}
+              style={{ height: 170 }}
+              ItemSeparatorComponent={() => <View className="w-1" />}
+              renderItem={({ item }) => (
+                <View className="w-[300]">
+                  <GoingEventCard event={item} />
+                </View>
+              )}
+              ListEmptyComponent={
+                <View className="items-center justify-center py-16 gap-4 w-[350]">
+                  <View className="bg-muted/50 w-20 h-20 rounded-full items-center justify-center">
+                    <Icon
+                      name="calendar"
+                      size={40}
+                      color="rgb(105, 105, 105)"
+                    />
+                  </View>
+                  <Text className="text-foreground text-lg font-semibold">
+                    No upcoming events
+                  </Text>
+                  <Text className="text-muted-foreground text-sm text-center px-8">
+                    Events you mark as “Going” will appear here
+                  </Text>
+                </View>
+                
+              }
+              ListFooterComponent={
+                goingEvents.length > 0 ? (
+                  <View className="pl-4 mt-16 w-[100] items-center justify-center">
+                    <Button
+                      variant="link"
+                      text="View All"
+                      className="w-full"
+                      onPress={() => router.push("/my-events")}
+                    />
+                  </View>
+                ) : undefined
+              }
+            />
+          </View>
+        )}
+        <Text className="text-2xl font-bold text-foreground mb-1">
+          Recommended For You
+        </Text>
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color="#fff" />
-          <Text style={styles.loadingLabel}>Loading events…</Text>
-        </View>
-      ) : (
-        <FlashList
-          data={events}
-          keyExtractor={(item: any) => item.id}
-          renderItem={({ item }: any) => (
-            <TouchableOpacity onPress={() => router.push(`/event/${item.id}`)}>
-              <EventCard event={item} />
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.list}
-          refreshing={isLoading}
-          onRefresh={refetch}
-          estimatedItemSize={250}
-          ListEmptyComponent={
-            <Text style={styles.empty}>
-              No events available yet. Check back soon!
-            </Text>
-          }
-        />
-      )}
-    </Screen>
+        {isLoadingRecommended ? (
+          <SkeletonList count={6} skeletonComponent={EventCardSkeleton} />
+        ) : (
+          <FlashList
+            data={recommendedEvents}
+            keyExtractor={(item: any) => item.id}
+            renderItem={({ item }: any) => (
+              <TouchableOpacity
+                onPress={() => router.push(`/event/${item.id}`)}
+              >
+                <EventCard event={item} />
+              </TouchableOpacity>
+            )}
+            estimatedItemSize={250}
+            contentContainerClassName="pb-2"
+            ItemSeparatorComponent={() => <View className="h-4" />}
+            ListEmptyComponent={
+              <Text className="text-center text-muted-foreground mt-10">
+                No recommended events yet. Check back soon!
+              </Text>
+            }
+            refreshing={isLoadingRecommended}
+            onRefresh={refetch}
+            ListFooterComponent={
+              <View className="pl-4 mt-4 pr-6 items-center justify-center">
+                <Text className="text-primary font-semibold text-base">
+                  End of event's List
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  header: {
-    gap: 8,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "white",
-  },
-  subtitle: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-  },
-  greeting: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 14,
-    marginTop: 4,
-  },
-  suggestButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#7c3aed",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  suggestButtonDisabled: {
-    backgroundColor: "rgba(124,58,237,0.5)",
-    opacity: 0.6,
-  },
-  suggestText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  center: {
-    paddingVertical: 32,
-    alignItems: "center",
-    gap: 8,
-  },
-  loadingLabel: {
-    color: "rgba(255,255,255,0.7)",
-  },
-  list: {
-    gap: 16,
-    paddingBottom: 96,
-  },
-  empty: {
-    textAlign: "center",
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 24,
-  },
-});

@@ -1,16 +1,18 @@
 import { useState } from "react";
 import {
   Alert,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
   ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import Icon from "@/components/ui/icon";
 
-import { Screen } from "@/components/Screen";
 import { supabase } from "@/lib/supabase";
 
 export const AuthScreen = () => {
@@ -20,6 +22,8 @@ export const AuthScreen = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const handleAuth = async () => {
     if (!email.trim() || !password.trim()) {
@@ -46,11 +50,6 @@ export const AuthScreen = () => {
           },
         });
         if (error) throw error;
-        Alert.alert(
-          "Success",
-          "Account created! Redirecting to profile setup..."
-        );
-        // Navigate to post-signup onboarding
         router.push("/(auth)/profile-setup");
       } else {
         console.log("🔐 Signing in with:", email);
@@ -59,175 +58,170 @@ export const AuthScreen = () => {
           password: password.trim(),
         });
         if (error) throw error;
-        Alert.alert("Success", "Welcome back!");
-        // Session hook will handle navigation to tabs
       }
     } catch (error: any) {
       console.error("❌ Auth error:", error);
-      Alert.alert("Auth failed", error.message || "An error occurred");
+      setError(error.message || "An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Screen>
-      <View style={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.emoji}>🎉</Text>
-          <Text style={styles.title}>EventMatch</Text>
-          <Text style={styles.subtitle}>
-            {isSignUp
-              ? "Create an account to get started"
-              : "Welcome back! Sign in to your account"}
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          {isSignUp && (
-            <View>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="John Doe"
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                value={fullName}
-                onChangeText={setFullName}
-                editable={!loading}
-              />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1 bg-background"
+    >
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
+        <View className="flex-1 px-6 py-10">
+          {/* Header */}
+          <View className="items-center gap-3 mt-10 mb-10">
+            <View className="bg-primary/20 w-20 h-20 rounded-3xl items-center justify-center mb-2">
+            <Icon name="pulse" size={40} color="rgb(4, 116, 56)" />
             </View>
-          )}
-
-          <View>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!loading}
-            />
-          </View>
-
-          <View>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleAuth}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.buttonLabel}>
-                {isSignUp ? "Sign Up" : "Sign In"}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.toggleText}>
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
-          </Text>
-          <TouchableOpacity
-            onPress={() => setIsSignUp(!isSignUp)}
-            disabled={loading}
-          >
-            <Text style={styles.toggleButton}>
-              {isSignUp ? "Sign In" : "Sign Up"}
+            <Text className="text-3xl font-black text-foreground">
+              EventMatch
             </Text>
-          </TouchableOpacity>
+            <Text className="text-muted-foreground text-sm text-center px-5">
+              {isSignUp
+                ? "Create an account to get started"
+                : "Welcome back! Sign in to your account"}
+            </Text>
+          </View>
+
+          {/* Form */}
+          <View><Text className='text-destructive'>{error}</Text></View>
+          <View className="gap-4">
+            {isSignUp && (
+              <View>
+                <View className="flex-row items-center gap-2 mb-2">
+                  <Icon
+                    name="account-outline"
+                    size={16}
+                    color="rgb(105, 105, 105)"
+                  />
+                  <Text className="text-muted-foreground font-semibold text-sm">
+                    Full Name
+                  </Text>
+                </View>
+                <View className="bg-card border border-muted rounded-2xl px-4 py-3.5 flex-row items-center">
+                  <TextInput
+                    className="flex-1 text-foreground text-base"
+                    placeholder="John Doe"
+                    placeholderTextColor="rgb(105, 105, 105)"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+            )}
+
+            <View>
+              <View className="flex-row items-center gap-2 mb-2">
+                <Icon
+                  name="email-outline"
+                  size={16}
+                  color="rgb(105, 105, 105)"
+                />
+                <Text className="text-muted-foreground font-semibold text-sm">
+                  Email
+                </Text>
+              </View>
+              <View className="bg-card border border-muted rounded-2xl px-4 py-3.5 flex-row items-center">
+                <TextInput
+                  className="flex-1 text-foreground text-base"
+                  placeholder="you@example.com"
+                  placeholderTextColor="rgb(105, 105, 105)"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+              </View>
+            </View>
+
+            <View>
+              <View className="flex-row items-center gap-2 mb-2">
+                <Icon
+                  name="lock-outline"
+                  size={16}
+                  color="rgb(105, 105, 105)"
+                />
+                <Text className="text-muted-foreground font-semibold text-sm">
+                  Password
+                </Text>
+              </View>
+              <View className="bg-card border border-muted rounded-2xl px-4 py-3.5 flex-row items-center">
+                <TextInput
+                  className="flex-1 text-foreground text-base"
+                  placeholder="••••••••"
+                  placeholderTextColor="rgb(105, 105, 105)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  className="ml-2"
+                >
+                  <Icon
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color="rgb(105, 105, 105)"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              className={`bg-primary rounded-2xl py-4 items-center mt-4 ${
+                loading ? "opacity-60" : ""
+              }`}
+              onPress={handleAuth}
+              disabled={loading}
+              style={{
+                shadowColor: "rgb(4, 116, 56)",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 8,
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-primary-foreground font-bold text-base">
+                  {isSignUp ? "Sign Up" : "Sign In"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Toggle Auth Mode */}
+          <View className="flex-row justify-center items-center mt-auto mb-5">
+            <Text className="text-muted-foreground text-sm">
+              {isSignUp
+                ? "Already have an account? "
+                : "Don't have an account? "}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setIsSignUp(!isSignUp)}
+              disabled={loading}
+            >
+              <Text className="text-primary font-bold text-sm">
+                {isSignUp ? "Sign In" : "Sign Up"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Screen>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    gap: 32,
-  },
-  hero: {
-    alignItems: "center",
-    gap: 12,
-    marginTop: 40,
-  },
-  emoji: {
-    fontSize: 48,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "white",
-  },
-  subtitle: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-    textAlign: "center",
-    marginHorizontal: 20,
-  },
-  form: {
-    gap: 16,
-  },
-  label: {
-    color: "rgba(255,255,255,0.9)",
-    fontWeight: "600",
-    marginBottom: 8,
-    fontSize: 14,
-  },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: "white",
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: "#7c3aed",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonLabel: {
-    color: "white",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: "auto",
-    marginBottom: 20,
-  },
-  toggleText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-  },
-  toggleButton: {
-    color: "#7c3aed",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-});

@@ -1,5 +1,5 @@
 import { Redirect } from "expo-router";
-import "./../global.css";
+import "./../../global.css";
 
 import { useSession } from "@/hooks/useSession";
 
