@@ -25,16 +25,10 @@ export const SupabaseSessionProvider = ({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log("🔐 SupabaseSessionProvider: Initializing...");
 
-    // async init to safely await getSession
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        console.log("🔐 Session retrieved:", {
-          hasSession: !!data?.session,
-          userId: data?.session?.user?.id,
-        });
         setSession(data?.session ?? null);
       } catch (err) {
         console.error("🔐 Error retrieving session:", err);
@@ -56,7 +50,6 @@ export const SupabaseSessionProvider = ({
             k.toLowerCase().includes("auth") ||
             k.toLowerCase().includes("token")
         );
-        console.log("🔐 AsyncStorage keys (filtered):", supaKeys);
         for (const k of supaKeys.slice(0, 10)) {
           const v = await AsyncStorage.getItem(k);
           console.log(
@@ -65,18 +58,13 @@ export const SupabaseSessionProvider = ({
           );
         }
       } catch (e) {
-        console.log("🔐 AsyncStorage diagnostics failed:", String(e));
+        console.log(" AsyncStorage diagnostics failed:", String(e));
       }
     })();
 
     // Subscribe to auth state changes
     const { data: subData } = supabase.auth.onAuthStateChange(
       (event: any, nextSession: any) => {
-        console.log("🔐 Auth state changed:", {
-          event,
-          hasSession: !!nextSession,
-          userId: nextSession?.user?.id,
-        });
         setSession(nextSession ?? null);
         setIsLoading(false);
       }
