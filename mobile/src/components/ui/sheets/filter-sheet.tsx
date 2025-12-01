@@ -49,14 +49,14 @@ export const FilterBottomSheet = ({
             text={hasTags ? "Save Filters" : "No filters selected"}
             onPress={onClose}
             disabled={!hasTags}
-            className={`flex-1 mr-3 rounded-xl ${hasTags ? "bg-primary" : "bg-muted"}`}
+            className={`flex-1 mr-3 rounded-xl text-center ${hasTags ? "bg-primary" : "bg-muted"}`}
           />
           {hasTags && (
             <Button
               variant="destructive"
               text="Clear All"
               onPress={clearTags}
-              className="flex-1 rounded-xl"
+              className="flex-1 rounded-xl text-center"
             />
           )}
         </View>

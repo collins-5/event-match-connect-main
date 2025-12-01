@@ -13,6 +13,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary web:hover:opacity-90 active:opacity-90",
         destructive: "bg-destructive web:hover:opacity-90 active:opacity-90",
+        destructiveoutline: "bg-red-300 border-red-400 web:hover:opacity-90 active:opacity-90",
         outline:
           "border-2 border-input bg-background web:hover:bg-accent web:hover:text-accent-foreground active:bg-accent",
         secondary: "bg-muted web:hover:opacity-80 active:opacity-80",
@@ -44,11 +45,11 @@ const buttonTextVariants = cva(
   {
     variants: {
       variant: {
-        default: "text-primary-foreground", 
+        default: "text-primary-foreground",
         destructive: "text-destructive-foreground",
+        destructiveoutline: "text-destructive-foreground",
         outline: "group-active:text-accent-foreground",
-        secondary:
-          "text-foreground group-active:text-secondary-foreground",
+        secondary: "text-foreground group-active:text-secondary-foreground",
         ghost: "group-active:text-accent-foreground",
         link: "text-primary group-active:underline",
       },

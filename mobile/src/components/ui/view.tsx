@@ -7,6 +7,7 @@ import { TextClassContext } from './text';
 
 type CustomViewProps = ViewProps & {
   textClassName?: string;
+  className?: string;
 };
 
 export default function View(props: CustomViewProps) {
