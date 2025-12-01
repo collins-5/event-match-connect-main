@@ -19,6 +19,7 @@ import { toZonedTime } from "date-fns-tz";
 import Icon from "@/components/ui/icon";
 import { Image } from "expo-image";
 import LogoutButton from "~/components/core/logout-button";
+import VersionDisplay from "~/components/core/version-disply";
 
 const { width, height } = Dimensions.get("window");
 const DRAWER_WIDTH = width * 0.57; 
@@ -39,7 +40,9 @@ type MenuIconName =
   | "shield-check-outline"
   | "help-circle-outline"
   | "home-outline"
-  | "close";
+  | "close"
+  | "heart-outline"
+  | "message-outline";
 
 interface MenuItemProps {
   title: string;
@@ -144,6 +147,19 @@ export const SettingsDrawer = ({
     return pathname.includes(cleanPath);
   };
 
+  const quickActions = [
+    {
+      title: "My Events",
+      icon: "heart-outline" as const,
+      route: "/(tabs)/my-events",
+    },
+    {
+      title: "Messages",
+      icon: "message-outline" as const,
+      route: "/(tabs)/chat",
+    },
+  ];
+
   const menuItems = [
     {
       title: "Account Settings",
@@ -170,6 +186,7 @@ export const SettingsDrawer = ({
       icon: "help-circle-outline" as const,
       route: "/(auth)/help",
     },
+    
   ];
 
   if (!visible) return null;
@@ -179,7 +196,7 @@ export const SettingsDrawer = ({
       {/* Backdrop */}
       <Animated.View
         style={{ opacity: backdropOpacity }}
-        className="absolute inset-0 bg-black/20 z-50"
+        className="absolute inset-0 z-50"
         pointerEvents={visible ? "auto" : "none"}
       >
         <TouchableWithoutFeedback onPress={onClose}>
@@ -202,8 +219,7 @@ export const SettingsDrawer = ({
           <View className="flex-1 bg-white dark:bg-black shadow-2xl border-r border-primary dark:border-gray-800">
             {/* Header */}
             <View className="flex-row items-center bg-primary justify-between p-6 pt-safe pb-4">
-              <View className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              </View>
+              <View className="text-2xl font-bold text-gray-900 dark:text-gray-100"></View>
               <TouchableOpacity
                 onPress={onClose}
                 className="bg-gray-100 dark:bg-gray-800 rounded-full p-2.5 shadow-md"
@@ -264,7 +280,18 @@ export const SettingsDrawer = ({
             <Separator className="mx-6" />
 
             {/* Menu */}
+
             <View className="flex-1 px-6 py-4 space-y-1">
+              {quickActions.map((item) => (
+                <MenuItem
+                  key={item.title}
+                  title={item.title}
+                  iconName={item.icon}
+                  onPress={() => navigate(item.route)}
+                  isActive={isPathActive(item.route)}
+                />
+              ))}
+              <Separator className="my-2" />
               {menuItems.map((item) => (
                 <MenuItem
                   key={item.title}
@@ -275,18 +302,17 @@ export const SettingsDrawer = ({
                 />
               ))}
               <Separator className="my-2" />
-              <View className="py-2 mb-30 px-6">
-                <LogoutButton />
+              <View className="py-2 mb-30 px-4">
+                <VersionDisplay />
               </View>
             </View>
 
-
             <View
               className="p-5 border-t border-gray-100 dark:border-gray-800"
-              style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+              style={{ paddingBottom: Math.max(insets.bottom, 80) }}
             >
               <Text className="text-xs text-center text-gray-500 dark:text-gray-400">
-                © 2025 EventMatch. All rights reserved.
+                © {new Date().getFullYear()} EventMatch. All rights reserved.
               </Text>
             </View>
           </View>

@@ -10,6 +10,7 @@ import { EventCardSkeleton } from "~/components/core/skeletons/event-card-skelet
 
 import { useProfile } from "~/hooks/useProfile";
 import HeaderSafeAreaView from "~/components/core/header-safe-area-view";
+import { Button } from "~/components/ui/button";
 
 type Event = {
   id: string;
@@ -38,8 +39,12 @@ export const MyEventsScreen = () => {
   return (
     <>     
     <View className="flex-1 bg-primary">
-      <View className="mb-2 px-4 pt-6">
-        <Text className="text-3xl font-bold tracking-tight text-primary-foreground">
+      <View className="mb-2 flex-row px-4 pt-6">
+        <Button
+        onPress={()=> router.back()}
+         leftIcon={<Icon name={'arrow-left'} size={28} className={'text-center mb-1'}/>}
+        />
+        <Text className="text-3xl py-2 ml-4  font-bold tracking-tight text-primary-foreground">
           My Upcoming Events
         </Text>
       </View>
