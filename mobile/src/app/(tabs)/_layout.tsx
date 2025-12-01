@@ -54,6 +54,7 @@ export default function TabsLayout() {
           name="my-events"
           options={{
             title: "My Events",
+            href: null,
             tabBarIcon: ({ focused }: { focused: boolean }) => (
               <Icon
                 name="heart-outline"
@@ -79,7 +80,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="chat"
           options={{
-            title: "Chat",
+            title: "Messages",
             tabBarIcon: ({ focused }: { focused: boolean }) => (
               <Icon
                 name="message-outline"
@@ -110,6 +111,19 @@ export default function TabsLayout() {
             tabBarIcon: ({ focused }: { focused: boolean }) => (
               <Icon
                 name="account-outline"
+                size={24}
+                color={focused ? activeColor : inactiveColor}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="ai"
+          options={{
+            title: "chat",
+            tabBarIcon: ({ focused }: { focused: boolean }) => (
+              <Icon
+                name="robot"
                 size={24}
                 color={focused ? activeColor : inactiveColor}
               />

@@ -47,7 +47,7 @@ export default function ChatInbox() {
           return (
             <TouchableOpacity
               key={conv.id}
-              className="flex-row items-center px-6 py-4 border-b border-muted/50 active:bg-muted/50"
+              className="flex-row items-center px-6 py-4"
               onPress={() => openChat(conv.id)}
             >
               {/* Avatar with Initials */}
