@@ -1,7 +1,6 @@
 import { Tabs } from "expo-router";
 import { Platform } from "react-native";
 import Icon from "@/components/ui/icon";
-import HeaderSafeAreaView from "~/components/core/header-safe-area-view";
 import { StatusBar } from "expo-status-bar";
 
 export default function TabsLayout() {
@@ -13,7 +12,6 @@ export default function TabsLayout() {
   return (
     <>
       <StatusBar style="light" />
-      <HeaderSafeAreaView />
       <Tabs
         screenOptions={{
           headerShown: false,

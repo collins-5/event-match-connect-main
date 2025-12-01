@@ -32,7 +32,7 @@ export const EventDetailScreen = () => {
     attendeeCount,
     loading,
     toggleLoading,
-    toggleAttendance, // This already handles API + state update
+    toggleAttendance, 
   } = useEventDetail(id);
 
   // Smart button handler
@@ -114,7 +114,14 @@ export const EventDetailScreen = () => {
               variant="default"
               className="rounded-full w-12  p-0 backdrop-blur"
               onPress={() => router.back()}
-              leftIcon={<Icon name="arrow-left" size={24} color="white" className='ml-4' />}
+              leftIcon={
+                <Icon
+                  name="arrow-left"
+                  size={24}
+                  color="white"
+                  className="ml-4"
+                />
+              }
             />
           </View>
 

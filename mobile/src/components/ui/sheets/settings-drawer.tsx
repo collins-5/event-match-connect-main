@@ -1,0 +1,297 @@
+// src/components/ui/sheets/settings-drawer.tsx
+import React, { useRef, useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+} from "react-native";
+import { useRouter, usePathname } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import Icon from "@/components/ui/icon";
+import { Image } from "expo-image";
+import LogoutButton from "~/components/core/logout-button";
+
+const { width, height } = Dimensions.get("window");
+const DRAWER_WIDTH = width * 0.57; 
+const KE_TIMEZONE = "Africa/Nairobi";
+
+const cn = (...inputs: (string | undefined | null | false)[]) => {
+  return twMerge(clsx(inputs));
+};
+
+const Separator = ({ className }: { className?: string }) => (
+  <View className={cn("h-px bg-gray-200 dark:bg-gray-700", className)} />
+);
+
+type MenuIconName =
+  | "account-cog-outline"
+  | "bell-outline"
+  | "tune"
+  | "shield-check-outline"
+  | "help-circle-outline"
+  | "home-outline"
+  | "close";
+
+interface MenuItemProps {
+  title: string;
+  onPress: () => void;
+  iconName: MenuIconName;
+  isActive?: boolean;
+}
+
+const MenuItem = ({
+  title,
+  onPress,
+  iconName,
+  isActive = false,
+}: MenuItemProps) => (
+  <TouchableOpacity
+    onPress={onPress}
+    className={cn(
+      "flex-row items-center space-x-4 py-4 px-4 rounded-2xl",
+      isActive
+        ? "bg-green-50 dark:bg-green-900/20 border-l-4 border-green-600"
+        : "active:bg-gray-100 dark:active:bg-gray-800"
+    )}
+    activeOpacity={0.7}
+  >
+    <Icon
+      name={iconName}
+      size={22}
+      className={isActive ? "text-green-600" : "text-primary"}
+    />
+    <Text
+      className={cn(
+        "text-lg font-medium flex-1",
+        isActive
+          ? "text-green-600 dark:text-green-400 font-semibold"
+          : "text-gray-800 dark:text-gray-100"
+      )}
+    >
+      {title}
+    </Text>
+    {isActive && <View className="w-2 h-2 rounded-full bg-green-600" />}
+  </TouchableOpacity>
+);
+
+type Props = {
+  visible: boolean;
+  onClose: () => void;
+  userName?: string | null;
+  initials: string;
+  avatarUrl?: string | null;
+  loading?: boolean;
+};
+
+export const SettingsDrawer = ({
+  visible,
+  onClose,
+  userName,
+  initials,
+  avatarUrl,
+  loading,
+}: Props) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+
+  const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  // Live KE Time
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const nowInKE = toZonedTime(currentTime, KE_TIMEZONE);
+  const time = format(nowInKE, "h:mm a");
+  const date = format(nowInKE, "EEEE, MMMM d, yyyy");
+
+  // Animation
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: visible ? 0 : -DRAWER_WIDTH,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: visible ? 1 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible]);
+
+  const navigate = (path: string) => {
+    onClose();
+    router.push(path);
+  };
+
+  const isPathActive = (path: string) => {
+    const cleanPath = path.replace("/(auth)/", "/");
+    return pathname.includes(cleanPath);
+  };
+
+  const menuItems = [
+    {
+      title: "Account Settings",
+      icon: "account-cog-outline" as const,
+      route: "/(auth)/account-settings",
+    },
+    {
+      title: "Notifications",
+      icon: "bell-outline" as const,
+      route: "/(auth)/notifications-settings",
+    },
+    {
+      title: "Preferences",
+      icon: "tune" as const,
+      route: "/(auth)/preferences",
+    },
+    {
+      title: "Privacy & Safety",
+      icon: "shield-check-outline" as const,
+      route: "/(auth)/privacy",
+    },
+    {
+      title: "Help & Support",
+      icon: "help-circle-outline" as const,
+      route: "/(auth)/help",
+    },
+  ];
+
+  if (!visible) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <Animated.View
+        style={{ opacity: backdropOpacity }}
+        className="absolute inset-0 bg-black/20 z-50"
+        pointerEvents={visible ? "auto" : "none"}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View className="flex-1" />
+        </TouchableWithoutFeedback>
+      </Animated.View>
+
+      {/* Drawer */}
+      <Animated.View
+        style={[
+          { transform: [{ translateX }] },
+          { width: DRAWER_WIDTH, height },
+        ]}
+        className="absolute left-0 top-0 z-50"
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+        >
+          <View className="flex-1 bg-white dark:bg-black shadow-2xl border-r border-primary dark:border-gray-800">
+            {/* Header */}
+            <View className="flex-row items-center bg-primary justify-between p-6 pt-safe pb-4">
+              <View className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              </View>
+              <TouchableOpacity
+                onPress={onClose}
+                className="bg-gray-100 dark:bg-gray-800 rounded-full p-2.5 shadow-md"
+                activeOpacity={0.8}
+              >
+                <Icon
+                  name="close"
+                  size={24}
+                  className="text-gray-700 dark:text-gray-300"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* User Info */}
+            <View className="px-6 pt-3 pb-5">
+              <View className="w-32 h-32 rounded-full bg-primary flex items-center justify-center shadow-lg mx-auto overflow-hidden">
+                <TouchableOpacity onPress={() => navigate("/profile")}>
+                  {avatarUrl ? (
+                    <Image
+                      source={{ uri: avatarUrl }}
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <Text className="text-white text-4xl font-bold">
+                      {initials}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <Text className="text-center text-xl font-medium text-gray-600 dark:text-gray-300 mt-3">
+                Hey, {userName || "there"}!
+              </Text>
+
+              {/* KE Time */}
+              <View className="flex-row items-center justify-center mt-5 space-x-4">
+                <View className="flex-row items-center">
+                  <Icon
+                    name="map-marker-radius-outline"
+                    size={16}
+                    className="text-green-600"
+                  />
+                  <Text className="text-sm text-gray-700 dark:text-gray-300 ml-1">
+                    Kenya (KE)
+                  </Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {time}
+                  </Text>
+                  <Text className="text-xs text-gray-500 dark:text-gray-500">
+                    {date}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <Separator className="mx-6" />
+
+            {/* Menu */}
+            <View className="flex-1 px-6 py-4 space-y-1">
+              {menuItems.map((item) => (
+                <MenuItem
+                  key={item.title}
+                  title={item.title}
+                  iconName={item.icon}
+                  onPress={() => navigate(item.route)}
+                  isActive={isPathActive(item.route)}
+                />
+              ))}
+              <Separator className="my-2" />
+              <View className="py-2 mb-30 px-6">
+                <LogoutButton />
+              </View>
+            </View>
+
+
+            <View
+              className="p-5 border-t border-gray-100 dark:border-gray-800"
+              style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+            >
+              <Text className="text-xs text-center text-gray-500 dark:text-gray-400">
+                © 2025 EventMatch. All rights reserved.
+              </Text>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Animated.View>
+    </>
+  );
+};

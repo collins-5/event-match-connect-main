@@ -1,27 +1,30 @@
-// screens/ProfileScreen.tsx (or wherever you have it)
+// src/screens/ProfileScreen.tsx
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 import Icon from "@/components/ui/icon";
 
-import { Screen } from "@/components/Screen";
 import { useSession } from "@/hooks/useSession";
 import { LogoutSheet } from "~/components/ui/sheets/logout-sheet";
 import { ProfileScreenSkeleton } from "~/components/core/skeletons/profile-skeleton";
 import { useProfile } from "@/hooks/useProfile";
 import { InterestTag } from "~/components/core/interest";
 
-// Import the reusable InterestTag
+// Import Tabs from your primitives
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { useState } from "react";
+import { SettingsDrawer } from "~/components/ui/sheets/settings-drawer";
 
 export const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useSession();
+  const [settingsOpen, setSettingsOpen] = useState(false); // ← Add this
   const {
     profile,
     interests,
     events,
     loading,
     activeTab,
-    setActiveTab,
+    setActiveTab, // ← this is typed as Dispatch<SetStateAction<"profile" | "going">>
     logout,
     setLogout,
     handleSignOut,
@@ -32,14 +35,21 @@ export const ProfileScreen = () => {
     return <ProfileScreenSkeleton />;
   }
 
+  // Fix TypeScript: safely cast the value to our allowed tabs
+  const handleTabChange = (value: string) => {
+    if (value === "profile" || value === "going") {
+      setActiveTab(value);
+    }
+  };
+
   return (
     <>
       <ScrollView
         className="flex-1 bg-background"
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-6 pt-6 pb-10">
-          {/* Header with Avatar */}
+        <View className="px-1 pt-6 pb-10">
+          {/* Avatar & Name */}
           <View className="items-center mb-6">
             <View className="relative mb-4">
               <View className="w-24 h-24 rounded-full bg-primary/20 justify-center items-center overflow-hidden border-4 border-primary/30">
@@ -70,44 +80,26 @@ export const ProfileScreen = () => {
             <Text className="text-muted-foreground text-sm">{user?.email}</Text>
           </View>
 
-          {/* Tabs
-          <View className="flex-row gap-2 mb-6 bg-muted rounded-full p-1">
-            <TouchableOpacity
-              className={`flex-1 py-2.5 items-center rounded-full ${
-                activeTab === "profile" ? "bg-background shadow-sm" : ""
-              }`}
-              onPress={() => setActiveTab("profile")}
-            >
-              <Text
-                className={`text-sm font-semibold ${
-                  activeTab === "profile" ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                Profile
-              </Text>
-            </TouchableOpacity>
+          {/* TABS */}
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="">
+            <TabsList variant="noPills" className="mb-6">
+              <TabsTrigger value="profile" className="flex-1">
+                <Text className="text-sm font-semibold">Profile</Text>
+              </TabsTrigger>
+              <TabsTrigger value="going" className="flex-1">
+                <Text className="text-sm font-semibold">
+                  Going{" "}
+                  <Text className="text-foreground font-bold">
+                    ({events.length})
+                  </Text>
+                </Text>
+              </TabsTrigger>
+            </TabsList>
 
-            <TouchableOpacity
-              className={`flex-1 py-2.5 items-center rounded-full ${
-                activeTab === "going" ? "bg-background shadow-sm" : ""
-              }`}
-              onPress={() => setActiveTab("going")}
-            >
-              <Text
-                className={`text-sm font-semibold ${
-                  activeTab === "going" ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                Going ({events.length})
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Profile Tab Content */}
-          {activeTab === "profile" ? (
-            <>
-              {/* Stats Cards */}
-              <View className="flex-row gap-3 mb-6">
+            {/* Profile Tab */}
+            <TabsContent value="profile" className="w-11/12">
+              {/* Stats */}
+              <View className="flex-row gap-1 mb-6">
                 <TouchableOpacity
                   className="flex-1 bg-card border border-muted rounded-2xl p-4 items-center"
                   onPress={() => router.push("/my-events")}
@@ -202,7 +194,7 @@ export const ProfileScreen = () => {
                 )}
               </View>
 
-              {/* Interests — NOW USING REUSABLE InterestTag */}
+              {/* Interests */}
               {interests.length > 0 && (
                 <View className="bg-card border border-muted rounded-2xl p-5 mb-6">
                   <View className="flex-row items-center gap-2 mb-4">
@@ -211,13 +203,12 @@ export const ProfileScreen = () => {
                       Interests
                     </Text>
                   </View>
-
                   <View className="flex-row flex-wrap gap-2">
                     {interests.map((interest) => (
                       <InterestTag
                         key={interest}
                         name={interest}
-                        selected={true} // always highlighted on profile
+                        selected={true}
                         size="md"
                       />
                     ))}
@@ -225,7 +216,7 @@ export const ProfileScreen = () => {
                 </View>
               )}
 
-              {/* Sign Out Button */}
+              {/* Sign Out */}
               <TouchableOpacity
                 className="bg-destructive/10 border-2 border-destructive/30 rounded-2xl p-4 items-center"
                 onPress={() => setLogout(true)}
@@ -241,10 +232,10 @@ export const ProfileScreen = () => {
                   </Text>
                 </View>
               </TouchableOpacity>
-            </>
-          ) : (
-            /* Going Tab Content - unchanged */
-            <>
+            </TabsContent>
+
+            {/* Going Tab */}
+            <TabsContent value="going" className="w-11/12">
               {events.length === 0 ? (
                 <View className="items-center justify-center py-16 gap-4">
                   <View className="bg-muted/50 w-20 h-20 rounded-full items-center justify-center">
@@ -339,8 +330,8 @@ export const ProfileScreen = () => {
                   ))}
                 </View>
               )}
-            </>
-          )}
+            </TabsContent>
+          </Tabs>
         </View>
       </ScrollView>
 

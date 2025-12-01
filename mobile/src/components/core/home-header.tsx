@@ -7,6 +7,7 @@ import { Pressable } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Skeleton } from "../ui/skeleton";
+import { TouchableOpacity } from "react-native";
 
 type HomeHeaderProps = {
   userName?: string | null;
@@ -14,6 +15,8 @@ type HomeHeaderProps = {
   avatarUrl?: string | null;
   className?: string;
   loading?: boolean;
+  SettingsOpen?: () => void;
+  settingsOpen?: boolean;
 };
 
 const HomeHeaderComponent = ({
@@ -22,21 +25,40 @@ const HomeHeaderComponent = ({
   avatarUrl,
   className,
   loading,
+  SettingsOpen,
 }: HomeHeaderProps) => {
   const firstName = userName?.split(" ")[0] || "there";
 
   return (
-    <View
+    <TouchableOpacity
+      onPress={SettingsOpen}
       className={cn(
         "flex-row items-center justify-between py-1 px-4",
         className
       )}
     >
-      {/* Left: Logo + Text */}
       <View className="flex-1">
         <View className="flex-row items-center gap-2">
-          {/* Sparkle with glow */}
-          <View className="relative">
+          {loading ? (
+            <Skeleton className="w-16 h-16 rounded-full overflow-hidden border-3 border-card bg-card shadow-lg items-center justify-center" />
+          ) : (
+            <View
+              className="w-14 h-14 rounded-full overflow-hidden border-3 border-card bg-card shadow-lg items-center justify-center"
+            >
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text className="text-primary text-xl font-bold">
+                  {initials}
+                </Text>
+              )}
+            </View>
+          )}
+          <View className="relative ml-5">
             <Text className="text-4xl">Sparkles</Text>
             <View className="absolute -inset-2 blur-3xl opacity-70">
               <Text className="text-4xl text-primary-foreground">Sparkles</Text>
@@ -72,7 +94,7 @@ const HomeHeaderComponent = ({
         </View>
 
         {/* Avatar */}
-        {loading ? (
+        {/* {loading ? (
           <Skeleton className="w-16 h-16 rounded-full overflow-hidden border-3 border-card bg-card shadow-lg items-center justify-center" />
         ) : (
           <Pressable
@@ -91,12 +113,12 @@ const HomeHeaderComponent = ({
               <Text className="text-primary text-xl font-bold">{initials}</Text>
             )}
           </Pressable>
-        )}
+        )} */}
 
         {/* Tiny online dot */}
         {/* <View className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-500 border-2 border-card" /> */}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

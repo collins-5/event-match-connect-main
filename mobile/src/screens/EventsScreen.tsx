@@ -32,6 +32,7 @@ export const EventsScreen = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   return (
+    <>
     <View className="flex-1 bg-primary">
       <EventsHeader
         searchQuery={searchQuery}
@@ -58,11 +59,13 @@ export const EventsScreen = () => {
             )}
             estimatedItemSize={250}
             ListFooterComponent={
-              <View className="pl-4 mt-4 pr-6 items-center justify-center">
-                <Text className="text-primary font-semibold text-base">
-                  End of event's List
-                </Text>
-              </View>
+              filteredEvents.length > 0 && filteredEvents.length > 2 ? (
+                <View className="py-8 px-4 items-center justify-center">
+                  <Text className="text-primary font-semibold text-base">
+                    End of event's list
+                  </Text>
+                </View>
+              ) : null
             }
             ListEmptyComponent={
               <View className="mt-16">
@@ -93,5 +96,6 @@ export const EventsScreen = () => {
         />
       </View>
     </View>
+    </>
   );
 };

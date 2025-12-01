@@ -9,6 +9,7 @@ import SkeletonList from "~/components/core/SkeletonList";
 import { EventCardSkeleton } from "~/components/core/skeletons/event-card-skeleton";
 
 import { useProfile } from "~/hooks/useProfile";
+import HeaderSafeAreaView from "~/components/core/header-safe-area-view";
 
 type Event = {
   id: string;
@@ -35,6 +36,7 @@ export const MyEventsScreen = () => {
   } = useProfile();
 
   return (
+    <>     
     <View className="flex-1 bg-primary">
       <View className="mb-2 px-4 pt-6">
         <Text className="text-3xl font-bold tracking-tight text-primary-foreground">
@@ -74,15 +76,18 @@ export const MyEventsScreen = () => {
               </View>
             }
             ListFooterComponent={
-              <View className="pl-4 mt-4 pr-6 items-center justify-center">
-                <Text className="text-primary font-semibold text-base">
-                  End of event's List
-                </Text>
-              </View>
+              goingEvents.length > 0 && goingEvents.length > 2 ? (
+                <View className="py-8 px-4 items-center justify-center">
+                  <Text className="text-primary font-semibold text-base">
+                    End of event's list
+                  </Text>
+                </View>
+              ) : null
             }
           />
         )}
       </View>
     </View>
+    </>
   );
 };
