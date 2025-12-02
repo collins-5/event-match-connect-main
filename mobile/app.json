@@ -13,16 +13,16 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.eventmatch.connect"
     },
     "android": {
       "package": "com.eventmatch.connect"
     },
     "extra": {
       "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
+        "projectId": "ccc98e60-0b28-4d64-b2fa-2d07dcc4e37f"
       }
     }
   }
 }
-

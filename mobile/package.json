@@ -9,7 +9,6 @@
     "web": "expo start --web",
     "ios": "expo run:ios",
     "android": "expo run:android",
-    "codegen": "graphql-codegen --config codegen.yml",
     "get-ip": "node src/lib/scripts/get-ip.js",
     "dev:with-setup": "npm run get-ip && npm run codegen && npm run dev",
     "prebuild": "expo prebuild",
@@ -112,7 +111,6 @@
   "devDependencies": {
     "@babel/core": "^7.28.5",
     "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
-    "@graphql-codegen/typescript-react-apollo": "^4.3.3",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.2",
     "@react-native-community/cli": "^20.0.0",
     "@react-native/metro-config": "^0.82.1",
